@@ -57,7 +57,7 @@ public class JwtUtil {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().getSubject();
     }
 
-    public Collection<? extends GrantedAuthority> extractAuthorities(String jwtToken) {
+    public Collection<GrantedAuthority> extractAuthorities(String jwtToken) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(jwtToken).getBody();
         List<?> rolesRaw = claims.get("roles", List.class);
 

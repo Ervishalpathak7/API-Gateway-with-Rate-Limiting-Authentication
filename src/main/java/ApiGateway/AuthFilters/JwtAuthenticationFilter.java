@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,9 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
@@ -44,14 +48,27 @@ public class JwtAuthenticationFilter implements WebFilter {
 
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.extractUsername(token);
+                Collection<GrantedAuthority> grantedAuthorities = jwtUtil.extractAuthorities(token);
+
+                // Convert roles to a comma-separated string
+                String roles = grantedAuthorities.stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.joining(","));
 
                 // Set authentication context
                 UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(username, null, jwtUtil.extractAuthorities(token));
+                        new UsernamePasswordAuthenticationToken(username, null, grantedAuthorities);
 
                 SecurityContext context = new SecurityContextImpl(auth);
 
-                return chain.filter(exchange).contextWrite(securityContext -> securityContext.put(SecurityContext.class, context));
+                // Add roles to the request headers
+                exchange.getRequest().mutate().headers(httpHeaders -> {
+                    httpHeaders.set("X-User-Roles", roles);
+                    httpHeaders.set("X-Username", username);
+                });
+
+                return chain.filter(exchange)
+                        .contextWrite(securityContext -> securityContext.put(SecurityContext.class, context));
             } else {
                 return unauthorizedResponse(exchange.getResponse());
             }
