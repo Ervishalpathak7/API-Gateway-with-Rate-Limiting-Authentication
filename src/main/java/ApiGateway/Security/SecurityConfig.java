@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)      // Disable basic authentication
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/login").permitAll()
+                        .pathMatchers("/users").permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), SecurityWebFiltersOrder.AUTHENTICATION)
