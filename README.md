@@ -42,13 +42,21 @@ secure, optimized entry point for microservice-based systems.
 
 ---
 
-## ⚡ **Architecture:**
 
-- API Gateway routes requests to microservices.
-- **Auth Service:** Issues JWT tokens.
-- **JWT Filter:** Validates tokens, sets security context.
-- **Rate Limiter:** Limits API calls based on IP or user ID.
-- **MongoDB:** Stores application data.
+## 🛡️ Security Flow
+
+**User logs in → Gets a JWT token.**
+
+**User makes requests with the token in the header.**
+
+**Gateway validates token (or fetches from cache).**
+
+**If token expired → Use /refresh to get a new one.**
+
+
+## 📈 Rate Limiting
+**10 requests/second, burst up to 20.**
+
 
 ---
 
