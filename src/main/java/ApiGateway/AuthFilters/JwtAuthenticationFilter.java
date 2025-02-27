@@ -1,5 +1,6 @@
 package ApiGateway.AuthFilters;
 
+import ApiGateway.Caching.TokenCacheService;
 import ApiGateway.Jwt.JwtUtil;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,10 +25,12 @@ import java.util.stream.Collectors;
 public class JwtAuthenticationFilter implements WebFilter {
 
     private final JwtUtil jwtUtil;
+    private final TokenCacheService tokenCacheService;
 
     @Autowired
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, TokenCacheService tokenCacheService) {
         this.jwtUtil = jwtUtil;
+        this.tokenCacheService = tokenCacheService;
     }
 
     @Override
@@ -46,8 +49,9 @@ public class JwtAuthenticationFilter implements WebFilter {
 
             String token = authHeader.substring(7);
 
-            if (jwtUtil.validateToken(token)) {
-                String username = jwtUtil.extractUsername(token);
+            String username = jwtUtil.validateToken(token);
+
+            if (username != null) {
                 Collection<GrantedAuthority> grantedAuthorities = jwtUtil.extractAuthorities(token);
 
                 // Convert roles to a comma-separated string

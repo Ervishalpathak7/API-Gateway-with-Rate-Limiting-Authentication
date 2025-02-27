@@ -1,6 +1,7 @@
 package ApiGateway.Security;
 
 import ApiGateway.AuthFilters.JwtAuthenticationFilter;
+import ApiGateway.Caching.TokenCacheService;
 import ApiGateway.Jwt.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -18,10 +19,12 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
+    private final TokenCacheService tokenCacheService;
 
     @Autowired
-    public SecurityConfig(JwtUtil jwtUtil) {
+    public SecurityConfig(JwtUtil jwtUtil, TokenCacheService tokenCacheService) {
         this.jwtUtil = jwtUtil;
+        this.tokenCacheService = tokenCacheService;
     }
 
     @Bean
@@ -34,7 +37,7 @@ public class SecurityConfig {
                         .pathMatchers("/users").permitAll()
                         .anyExchange().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), SecurityWebFiltersOrder.AUTHENTICATION)
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, tokenCacheService), SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 

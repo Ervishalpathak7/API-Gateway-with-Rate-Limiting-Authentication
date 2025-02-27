@@ -1,6 +1,8 @@
 package ApiGateway.Jwt;
 
+import ApiGateway.Caching.TokenCacheService;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -21,6 +23,11 @@ public class JwtUtil {
     private String SECRET;
 
     private static SecretKey key;
+    private final TokenCacheService tokenCacheService;
+
+    public JwtUtil(TokenCacheService tokenCacheService) {
+        this.tokenCacheService = tokenCacheService;
+    }
 
     @PostConstruct
     public void init() {
@@ -41,19 +48,34 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Validate JWT token
-    public boolean validateToken(String token) {
+    // Validate JWT token and extract username from it
+    public String validateToken(String token) {
         try {
+            // Check if the token is in the cache
+            String cachedUsername = tokenCacheService.getUsernameFromCache(token);
+
+            if (cachedUsername != null) return cachedUsername;
+
+            // Validate the token
             Jws<Claims> claimsJws = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return !claimsJws.getBody().getExpiration().before(new Date());
+            String username = claimsJws.getBody().getSubject();
+            // Cache the token
+            tokenCacheService.cacheToken(token, username);
+            return username;
+
         } catch (Exception e) {
-            System.out.println("Token validation failed: " + e.getMessage());
-            return false;
+            return null;
         }
     }
 
     // Extract Username
     public String extractUsername(String token) {
+
+        // check if the token is in the cache
+        String cachedUsername = tokenCacheService.getUsernameFromCache(token);
+        if (cachedUsername != null) return cachedUsername;
+
+        // Extract the username from the token
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().getSubject();
     }
 
@@ -70,5 +92,16 @@ public class JwtUtil {
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
+    }
+
+    public boolean validateTokenIgnoreExpiration(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
